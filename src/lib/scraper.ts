@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import https from 'https';
-import type { CourseData } from '../types/course';
+import { CoursesListByType, CourseType, type CourseData } from '../types/course';
 
 // Create a custom axios instance with retry logic
 const axiosInstance = axios.create({
@@ -30,7 +30,7 @@ axiosInstance.interceptors.response.use(undefined, async (error) => {
     return Promise.reject(error);
 });
 
-export async function scrapeCourses(url: string): Promise<CourseData[]> {
+export async function scrapeCourses(url: string): Promise<CoursesListByType[]> {
     // Fetch the HTML content
     const { data } = await axiosInstance.get(url, {
         headers: {
@@ -48,46 +48,77 @@ export async function scrapeCourses(url: string): Promise<CourseData[]> {
     // Array to store all course data
     const allCourses: CourseData[] = [];
 
+    let currentYear = -1;
+    let currentType = CourseType.Unknown;
+    const getCourseType = (text: string): CourseType => {
+        if (text.includes('לימודי חובה')) return CourseType.Mandatory;
+        if (text.includes('קורסי בחירה')) return CourseType.Optional;
+        if (text.includes('חובת בחירה')) return CourseType.RequiredElective;
+        return CourseType.Unknown;
+    };
+
     // Process each table that matches the structure we're looking for
-    $('table').each((tableIndex, tableElement) => {
-        // Skip tables that don't have enough columns
-        if ($(tableElement).find('tr:first-child td, tr:first-child th').length < 5) return;
+    $('.tabHeader, span[id*="lblEshkolType"], td:contains("שנה")').each((index, element) => {
+        const text = $(element).text().trim();
 
-        // Process each row in the table
-        $(tableElement).find('tr:not(:first-child)').each((rowIndex, rowElement) => {
-            const columns = $(rowElement).find('td');
+        if (text.includes("שנה א")) 
+            currentYear = 1;
+        else if (text.includes("שנה ב"))
+            currentYear = 2;
+        else if (text.includes("שנה ג"))
+            currentYear = 3;
+        else if (text.includes("שנה ד"))
+            currentYear = 4;
+        else if (text.includes("שנה ה"))
+            currentYear = 5;
+        else if (text.includes("שנה ו"))
+            currentYear = 6;
+        else if (text.includes("שנה ז"))
+            currentYear = 7;
+        else if (text.includes("שנה ח"))
+            currentYear = 8;
 
-            // Make sure we have enough columns
-            if (columns.length < 5) return;
+        const typeFromText = getCourseType(text);
+        currentType = typeFromText;
 
-            // Extract data from columns - adjust indices to match the actual HTML structure
-            var faculty = "", untilYear = null;
-            if (columns.length == 5)
-                faculty = $(columns.eq(4)).text().trim();
-            else if (columns.length == 6) {
-                faculty = $(columns.eq(5)).text().trim();
-                untilYear = $(columns.eq(4)).text().trim();
-            }
-            else if (columns.length == 7) {
-                faculty = $(columns.eq(6)).text().trim();
-                untilYear = $(columns.eq(4)).text().trim();
-            }
+        const courseTable = $(element).closest('table').nextAll('table[id*="grdCourses"]').first();
+        courseTable.find('tr.gridItem, tr.gridAlternatingItem').each((rowIndex, rowElement) => {
+            // Extract course details
+            const courseID = $(rowElement).find('a[id$="_lblCourseNumber"]').text().trim();
+            const courseLink = `https://catalog.huji.ac.il/pages/wfrCourse.aspx?faculty=1&year=${new Date().getFullYear()}&courseId=${courseID}`;
 
-            const course: CourseData = {
-                id: $(columns.eq(0)).text().trim(),
-                name: $(columns.eq(1)).text().trim(),
-                points: $(columns.eq(2)).text().trim(),
-                semester: $(columns.eq(3)).text().trim(),
-                untilYear: untilYear,
-                faculty: faculty,
-            };
+            if (courseID)
+            {
+                const course: CourseData = {
+                    id: courseID,
+                    name: $(rowElement).find('a[id$="_lblCourseName"]').text().trim(),
+                    link: courseLink,
+                    points: $(rowElement).find('span[id$="_lblCoursePoints"]').text().trim(),
+                    semester: $(rowElement).find('span[id$="_lblCourseSemester"]').text().trim(),
+                    untilYear: $(rowElement).find('span[id$="_lblCourseMaxYear"]').text().trim() || null,
+                    faculty: $(rowElement).find('span[id$="_lblRelatedChug"]').text().trim() || '',
+                    year: currentYear,
+                    type: currentType
+                };
 
-            // Only add valid courses (with an ID)
-            if (course.id) {
                 allCourses.push(course);
             }
         });
     });
 
-    return allCourses;
+    // Group courses by year and type
+    const groupedCourses: CoursesListByType[] = [];
+    allCourses.forEach(course => {
+        if (!groupedCourses[course.year - 1]) {
+            groupedCourses[course.year - 1] = {
+                [CourseType.Mandatory]: [],
+                [CourseType.Optional]: [],
+                [CourseType.RequiredElective]: [],
+                [CourseType.Unknown]: []
+            };
+        }
+        groupedCourses[course.year - 1][course.type].push(course);
+    });
+
+    return groupedCourses;
 }

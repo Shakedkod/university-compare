@@ -1,6 +1,5 @@
-'use client';
-
 import { CourseData } from '@/types/course';
+import Link from 'next/link';
 
 interface CourseTableProps {
     courses: CourseData[];
@@ -32,7 +31,15 @@ export default function CourseTable({ courses }: CourseTableProps) {
                                 <td className="px-4 py-2 whitespace-nowrap">{untilYear}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">{course.semester}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">{course.points}</td>
-                                <td className="px-4 py-2 whitespace-nowrap">{course.name}</td>
+                                <td className="px-4 py-2 whitespace-nowrap">
+                                    {course.link.trim().length > 0 ? (
+                                        <Link href={course.link} target="_blank" className="text-orange-500 hover:underline">
+                                            {course.name}
+                                        </Link>
+                                    ) : (
+                                        <span className="text-gray-500">{course.name}</span>
+                                    )}
+                                </td>
                                 <td className="px-4 py-2 whitespace-nowrap">{course.id}</td>
                             </tr>
                         );

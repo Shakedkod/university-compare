@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import CourseTable from './CourseTable';
-import { CourseData } from '@/types/course';
+import { CoursesListByType, CourseType } from '@/types/course';
 
 export default function WebScraper() {
-    const [courses, setCourses] = useState<CourseData[]>([]);
+    const [courses, setCourses] = useState<CoursesListByType[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [url, setUrl] = useState<string>('');
@@ -41,11 +41,7 @@ export default function WebScraper() {
             setLoading(false);
         }
     };
-
-    // Group courses by type (based on the screenshot showing different sections)
-    const mandatoryCourses = courses.filter(course => Number(course.points) > 0);
-    const electiveCourses = courses.filter(course => Number(course.points) === 0);
-
+    
     return (
         <div className="container mx-auto py-8 px-4">
             <h1 className="text-3xl font-bold mb-6 text-center">Course Information Scraper</h1>
@@ -81,33 +77,37 @@ export default function WebScraper() {
                 </div>
             )}
 
-            {courses.length > 0 && (
-                <div className="space-y-8">
-                    {/* Mandatory Courses Section */}
-                    {mandatoryCourses.length > 0 && (
-                        <div>
-                            <h2 className="text-xl font-semibold mb-3 bg-orange-400 text-white py-2 px-4 rounded-t-md">
-                                לימודי חובה (Mandatory Courses)
-                            </h2>
-                            <CourseTable courses={mandatoryCourses} />
-                        </div>
-                    )}
+            {courses.map((year, index) => {
+                const mandatoryCourses = year[CourseType.Mandatory] || [];
+                const requiredElectiveCourses = year[CourseType.RequiredElective] || [];
+                const electiveCourses = year[CourseType.Optional] || [];
 
-                    {/* Elective Courses Section */}
-                    {electiveCourses.length > 0 && (
-                        <div>
-                            <h2 className="text-xl font-semibold mb-3 bg-orange-400 text-white py-2 px-4 rounded-t-md">
-                                קורסי בחירה (Elective Courses)
-                            </h2>
-                            <CourseTable courses={electiveCourses} />
-                        </div>
-                    )}
-
-                    <div className="mt-4 text-sm text-gray-500 text-center">
-                        Total courses: {courses.length} | Mandatory: {mandatoryCourses.length} | Elective: {electiveCourses.length}
+                return (
+                    <div key={index} className="mb-8">
+                        <h2 className="text-xl font-semibold mb-3 bg-orange-400 text-white py-2 px-4 rounded-t-md text-right">
+                            שנת לימודים {year[0][0].year}
+                        </h2>
+                        {mandatoryCourses.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="text-lg font-semibold mb-2 text-center">חובה</h3>
+                                <CourseTable courses={mandatoryCourses} />
+                            </div>
+                        )}
+                        {requiredElectiveCourses.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="text-lg font-semibold mb-2 text-center">חובת בחירה</h3>
+                                <CourseTable courses={requiredElectiveCourses} />
+                            </div>
+                        )}
+                        {electiveCourses.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="text-lg font-semibold mb-2 text-center">בחירה</h3>
+                                <CourseTable courses={electiveCourses} />
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                );
+            })}
         </div>
     );
 }
