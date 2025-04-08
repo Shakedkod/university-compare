@@ -18,15 +18,15 @@ export default function HTMLInspector() {
         setError(null);
 
         try {
-            const response = await fetch('/api/debug', {
-                method: 'POST',
+            const response = await fetch('/api/faculties?start=101&end=997', {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url }),
             });
 
             const data = await response.json();
+            console.log(data);
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to fetch HTML');
