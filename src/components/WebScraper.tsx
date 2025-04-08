@@ -65,7 +65,11 @@ export default function WebScraper() {
 
     return (
         <div className="container mx-auto py-8 px-4">
-            <h1 className="text-3xl font-bold mb-6 text-center text-black">Course Information Scraper</h1>
+            <div className="flex flex-row justify-center items-center">
+                <img src="/icon.png" alt="Logo" className="h-20 w-20" />
+                <h1 className="text-3xl font-bold text-center text-black">Get Course Information</h1>
+            </div>
+            <p className="text-center text-gray-700 mb-8">Currently works only for HUJI(Hebrew University of Jerusalem, Israel)</p>
 
             <div className="max-w-2xl mx-auto mb-8 bg-white p-6 rounded-lg shadow-md space-y-4">
                 <div>
